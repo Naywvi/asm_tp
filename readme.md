@@ -26,7 +26,7 @@
 <h3>- asm07/</h3>
 <p>Devra calculer la somme des nombres entiers inférieurs à un nombre donné.</p>
 
-<h3 href="google.fr">- asm08/</h3>
+<h3><a href='google.fr'>az</a>- asm08/</h3>
 <p>Ecrire un programme qui effectue une conversion de bases numériques </p>
 
 ***exemple: décimal vers binaire ou hexadécimale***
