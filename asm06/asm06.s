@@ -9,38 +9,36 @@ _start:
     pop rcx
     cmp rcx, 3
     jl exit_error
-    
+
     pop rdi
     pop rdi
-    
+
     cmp byte [rdi], '-'
     je exit_negative
-    
+
     call atoi
     mov rbx, rax
-    
+
     pop rdi
     cmp byte [rdi], '-'
     je exit_negative
-    
+
     call atoi
     add rax, rbx
-    
+
     mov rdi, rax
     call print_number
-    
+
     mov rax, 60
     xor rdi, rdi
     syscall
-    
 exit_error:
     mov rax, 60
     mov rdi, 1
     syscall
-    
 exit_negative:
     mov rax, 60
-    mov rdi, 139
+    mov rdi, 0
     syscall
 
 atoi:
