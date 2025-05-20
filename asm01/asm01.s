@@ -1,19 +1,17 @@
-global _start
-
 section .data
-    msg: db "1337", 0
+    msg db "1337", 10
+    len equ $ - msg
 
 section .text
-
+    global _start
+    
 _start:
-;sys_write
     mov rax, 1
     mov rdi, 1
     mov rsi, msg
-    mov rdx, 6
+    mov rdx, len
     syscall
-
-_exit:
+    
     mov rax, 60
-    mov rdi, 0
+    xor rdi, rdi
     syscall
