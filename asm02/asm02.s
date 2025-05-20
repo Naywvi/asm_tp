@@ -1,33 +1,34 @@
-global _start
-
-section .bss
-    buffer resb 8 ;resb = reserve byte
-
 section .data
-    msg: db "1337", 0 ;db = double byte
+    output db "1337", 10
+    output_len equ $ - output
+    buf times 3 db 0
 
 section .text
+    global _start
 
 _start:
-;sys_read
     mov rax, 0
     mov rdi, 0
-    mov rsi, buffer
-    mov rdx, 8
+    mov rsi, buf
+    mov rdx, 3
     syscall
-
-    mov al, [buffer]
-    cmp al, x34
-    jne _error
     
-;sys_write
+    cmp byte [buf], '4'
+    jne exit_with_error
+    cmp byte [buf+1], '2'
+    jne exit_with_error
+    
     mov rax, 1
     mov rdi, 1
-    mov rsi, msg
-    mov rdx, 6
+    mov rsi, output
+    mov rdx, output_len
     syscall
     
-_exit:
     mov rax, 60
     mov rdi, 0
+    syscall
+    
+exit_with_error:
+    mov rax, 60
+    mov rdi, 1
     syscall

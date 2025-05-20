@@ -1,0 +1,1 @@
+nasm -f elf64 test16.s && ld -o test16 test16.o && ./test16
