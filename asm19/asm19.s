@@ -47,8 +47,8 @@ _start:
     
     mov rax, 2
     mov rdi, filename
-    mov rsi, 1090
-    mov rdx, 0644
+    mov rsi, 1090       ; O_WRONLY | O_CREAT | O_APPEND (0x442)
+    mov rdx, 0666       ; permissions: rw-rw-rw-
     syscall
     
     test rax, rax
@@ -64,35 +64,11 @@ _start:
     
     mov dword [addr_len], 16
     
-receive_loop:
-    mov rax, 45
-    mov rdi, r12
-    mov rsi, buffer
-    mov rdx, 1024
-    mov r10, 0
-    mov r8, client_addr
-    mov r9, addr_len
-    syscall
-    
-    test rax, rax
-    js receive_loop
-    
-    mov r14, rax
-    
-    mov byte [buffer + r14], 10
-    inc r14
-    
-    mov rax, 1
-    mov rdi, r13
-    mov rsi, buffer
-    mov rdx, r14
-    syscall
-    
     jmp receive_loop
     
 socket_error:
     mov rax, 1
-    mov rdi, 1
+    mov rdi, 2          ; stderr
     mov rsi, error_socket
     mov rdx, error_socket_len
     syscall
@@ -103,7 +79,7 @@ socket_error:
     
 bind_error:
     mov rax, 1
-    mov rdi, 1
+    mov rdi, 2          ; stderr
     mov rsi, error_bind
     mov rdx, error_bind_len
     syscall
@@ -118,7 +94,7 @@ bind_error:
     
 file_error:
     mov rax, 1
-    mov rdi, 1
+    mov rdi, 2          ; stderr
     mov rsi, error_file
     mov rdx, error_file_len
     syscall
@@ -130,3 +106,30 @@ file_error:
     mov rax, 60
     mov rdi, 1
     syscall
+    
+receive_message:
+    mov r14, rax
+    
+    mov byte [buffer + r14], 10
+    inc r14
+    
+    mov rax, 1
+    mov rdi, r13
+    mov rsi, buffer
+    mov rdx, r14
+    syscall
+    
+receive_loop:
+    mov rax, 45
+    mov rdi, r12
+    mov rsi, buffer
+    mov rdx, 1024
+    mov r10, 0
+    mov r8, client_addr
+    mov r9, addr_len
+    syscall
+    
+    test rax, rax
+    js receive_loop
+    
+    jmp receive_message
