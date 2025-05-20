@@ -22,23 +22,40 @@ section .data
     err_args_len equ $ - err_args
     
     asm_suffix db ".s", 0
+    nasm_cmd db "/bin/nasm", 0
+    nasm_arg1 db "-f", 0
+    nasm_arg2 db "elf64", 0
+    
+    ld_cmd db "/bin/ld", 0
+    ld_arg1 db "-o", 0
+    ld_arg3 db "asm01.o", 0
+    
+    nasm_args dq nasm_cmd
+              dq nasm_arg1
+              dq nasm_arg2
+              dq 0
+              dq 0
+    
+    ld_args dq ld_cmd
+            dq ld_arg1
+            dq 0
+            dq ld_arg3
+            dq 0
 
 section .text
     global _start
 
 _start:
-    pop rcx             ; Nombre d'arguments
-    cmp rcx, 2          ; Au moins 2 arguments (programme + chemin)
+    pop rcx
+    cmp rcx, 2
     jl print_usage
     
-    pop rdi             ; Ignorer le nom du programme
-    pop rdi             ; Chemin de asm01
+    pop rdi
+    pop rdi
     
-    ; Copier le chemin dans path_buffer
     mov rsi, path_buffer
     call copy_string
     
-    ; Créer le chemin pour le fichier source (.s)
     mov rdi, path_buffer
     mov rsi, asm_src_path
     call copy_string
@@ -51,49 +68,31 @@ _start:
     mov rsi, asm_suffix
     call copy_string
     
-    ; Créer le fichier source
     mov rax, 2
     mov rdi, asm_src_path
-    mov rsi, 1101o      ; O_WRONLY | O_CREAT | O_TRUNC
-    mov rdx, 0644o      ; Permissions
+    mov rsi, 1101o
+    mov rdx, 0644o
     syscall
     
     cmp rax, 0
     jl error
     
-    mov rdi, rax        ; Descripteur de fichier
-    mov rax, 1          ; sys_write
-    mov rsi, source     ; Contenu à écrire
-    mov rdx, source_len ; Longueur du contenu
+    mov r12, rax
+    
+    mov rax, 1
+    mov rdi, r12
+    mov rsi, source
+    mov rdx, source_len
     syscall
     
-    mov rax, 3          ; sys_close
+    mov rax, 3
+    mov rdi, r12
     syscall
     
-    ; Préparer les arguments pour nasm
-    mov qword [nasm_args + 24], asm_src_path
+    mov rdi, asm_src_path
+    call execute_nasm_and_ld
     
-    ; Préparer les arguments pour ld
-    mov qword [ld_args + 16], path_buffer
-    
-    ; Compiler avec nasm
-    mov rax, 59         ; sys_execve
-    mov rdi, nasm_cmd   ; Commande à exécuter
-    mov rsi, nasm_args  ; Arguments
-    xor rdx, rdx        ; Environnement
-    syscall
-    
-    ; Si nasm ne s'exécute pas normalement, on passe ici
-    ; Compiler avec ld
-    mov rax, 59         ; sys_execve
-    mov rdi, ld_cmd     ; Commande à exécuter
-    mov rsi, ld_args    ; Arguments
-    xor rdx, rdx        ; Environnement
-    syscall
-    
-    ; Si tout va bien, on ne devrait jamais arriver ici car execve ne retourne
-    ; qu'en cas d'erreur
-    xor rdi, rdi        ; Code de retour 0
+    xor rdi, rdi
     jmp exit
     
 print_usage:
@@ -104,14 +103,12 @@ print_usage:
     syscall
     
 error:
-    mov rdi, 1          ; Code de retour 1
+    mov rdi, 1
     
 exit:
-    mov rax, 60         ; sys_exit
+    mov rax, 60
     syscall
 
-; Fonction pour copier une chaîne de caractères
-; rdi = source, rsi = destination
 copy_string:
     xor rcx, rcx
     
@@ -124,8 +121,6 @@ copy_loop:
     
     ret
 
-; Fonction pour obtenir la longueur d'une chaîne de caractères
-; rdi = chaîne, retourne la longueur dans rax
 get_string_length:
     xor rax, rax
     
@@ -138,23 +133,64 @@ length_loop:
 length_done:
     ret
 
-section .data
-    nasm_cmd db "/usr/bin/nasm", 0
-    nasm_args dq nasm_cmd
-              dq nasm_arg1
-              dq nasm_arg2
-              dq 0
-              dq 0
+execute_nasm_and_ld:
+    mov [nasm_args + 24], rdi
     
-    nasm_arg1 db "-f", 0
-    nasm_arg2 db "elf64", 0
+    mov rax, 2
+    mov rsi, 0
+    mov rdx, 0
+    syscall
+    mov r9, rax
     
-    ld_cmd db "/usr/bin/ld", 0
-    ld_args dq ld_cmd
-            dq ld_arg1
-            dq 0
-            dq ld_arg3
-            dq 0
+    mov rax, 57
+    syscall
     
-    ld_arg1 db "-o", 0
-    ld_arg3 db "asm01.o", 0
+    test rax, rax
+    jnz parent_wait
+    
+    mov rax, 59
+    mov rdi, nasm_cmd
+    mov rsi, nasm_args
+    xor rdx, rdx
+    syscall
+    
+    mov rax, 60
+    mov rdi, 1
+    syscall
+    
+parent_wait:
+    mov rdi, -1
+    xor rsi, rsi
+    xor rdx, rdx
+    xor r10, r10
+    mov rax, 61
+    syscall
+    
+    mov rdi, path_buffer
+    mov [ld_args + 16], rdi
+    
+    mov rax, 57
+    syscall
+    
+    test rax, rax
+    jnz parent_wait2
+    
+    mov rax, 59
+    mov rdi, ld_cmd
+    mov rsi, ld_args
+    xor rdx, rdx
+    syscall
+    
+    mov rax, 60
+    mov rdi, 1
+    syscall
+    
+parent_wait2:
+    mov rdi, -1
+    xor rsi, rsi
+    xor rdx, rdx
+    xor r10, r10
+    mov rax, 61
+    syscall
+    
+    ret
