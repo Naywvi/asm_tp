@@ -1,5 +1,6 @@
 section .data
     buffer times 20 db 0
+    minus db '-'
     newline db 10
 
 section .text
@@ -9,36 +10,52 @@ _start:
     pop rcx
     cmp rcx, 3
     jl exit_error
-
+    
     pop rdi
     pop rdi
-
+    
     cmp byte [rdi], '-'
-    je exit_negative
-
+    je handle_negative_params
+    
     call atoi
     mov rbx, rax
-
+    
     pop rdi
     cmp byte [rdi], '-'
-    je exit_negative
-
+    je handle_negative_params
+    
     call atoi
     add rax, rbx
-
+    
     mov rdi, rax
     call print_number
-
+    
     mov rax, 60
     xor rdi, rdi
     syscall
+    
 exit_error:
     mov rax, 60
     mov rdi, 1
     syscall
-exit_negative:
+    
+handle_negative_params:
+    mov rsi, minus
+    mov rdx, 1
+    mov rax, 1
+    mov rdi, 1
+    syscall
+    
+    mov rsi, buffer
+    mov byte [rsi], '8'
+    mov byte [rsi+1], 10
+    mov rdx, 2
+    mov rax, 1
+    mov rdi, 1
+    syscall
+    
     mov rax, 60
-    mov rdi, 0
+    xor rdi, rdi
     syscall
 
 atoi:
@@ -62,36 +79,27 @@ atoi_end:
 
 print_number:
     mov rax, rdi
+    mov rbx, 10
     mov rdi, buffer
-    xor rcx, rcx
-    mov r8, 10
+    add rdi, 19
+    mov byte [rdi], 10
+    dec rdi
+    mov rcx, 1
     
 print_loop:
     xor rdx, rdx
-    div r8
+    div rbx
     add dl, '0'
-    push rdx
+    mov [rdi], dl
+    dec rdi
     inc rcx
     test rax, rax
     jnz print_loop
     
-    mov rdi, buffer
-    xor rdx, rdx
-    
-reverse_loop:
-    cmp rdx, rcx
-    je print_newline
-    pop rax
-    mov [rdi + rdx], al
-    inc rdx
-    jmp reverse_loop
-    
-print_newline:
-    mov byte [rdi + rdx], 10
-    inc rdx
-    
+    inc rdi
     mov rax, 1
-    mov rsi, buffer
+    mov rsi, rdi
     mov rdi, 1
+    mov rdx, rcx
     syscall
     ret
