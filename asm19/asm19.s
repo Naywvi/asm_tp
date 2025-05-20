@@ -1,57 +1,130 @@
+section .bss
+    buffer resb 1024
+    server_addr resb 16
+    client_addr resb 16
+    addr_len resd 1
+
 section .data
-    sh_cmd db "/bin/sh", 0
-    sh_arg db "-c", 0
-    
-    command db "lsof -i :1337,4242 | grep -v PID | awk '{print $2}' | xargs kill -9 2>/dev/null || true", 0
-    
-    success_msg db "Killed processes listening on ports 1337 and 4242", 10
-    success_len equ $ - success_msg
+    filename db "messages", 0
+    listening_msg db 27, "[38;5;221m⏳ Listening on port 1337", 27, "[0m", 10
+    listening_len equ $ - listening_msg
+    error_socket db "Error creating socket", 10
+    error_socket_len equ $ - error_socket
+    error_bind db "Error binding socket", 10
+    error_bind_len equ $ - error_bind
+    error_file db "Error opening log file", 10
+    error_file_len equ $ - error_file
 
 section .text
     global _start
 
 _start:
-    mov rax, 57         ; sys_fork
+    mov rax, 41
+    mov rdi, 2
+    mov rsi, 2
+    mov rdx, 0
     syscall
     
     test rax, rax
-    jnz parent          ; Parent process
+    js socket_error
     
-    ; In child process, execute the shell command
-    mov rax, 59         ; sys_execve
-    mov rdi, sh_cmd     ; /bin/sh
+    mov r12, rax
     
-    ; Set up arguments array
-    push 0              ; NULL terminator
-    push command        ; The command string
-    push sh_arg         ; -c
-    push sh_cmd         ; /bin/sh
-    mov rsi, rsp        ; Point to the arguments array
+    mov word [server_addr], 2
+    mov word [server_addr+2], 0x3905
+    mov dword [server_addr+4], 0
     
-    xor rdx, rdx        ; No environment variables
+    mov rax, 49
+    mov rdi, r12
+    mov rsi, server_addr
+    mov rdx, 16
     syscall
     
-    ; If execve returns, it failed
-    mov rax, 60         ; sys_exit
-    mov rdi, 1          ; Exit code 1
+    test rax, rax
+    js bind_error
+    
+    mov rax, 2
+    mov rdi, filename
+    mov rsi, 1090
+    mov rdx, 0666
     syscall
     
-parent:
-    ; Parent process waits for child to finish
-    xor r10, r10
-    xor rdx, rdx
-    xor rsi, rsi
-    mov rdi, rax
-    mov rax, 61         ; sys_wait4
+    test rax, rax
+    js file_error
+    
+    mov r13, rax
+    
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, listening_msg
+    mov rdx, listening_len
     syscall
     
-    ; Display success message
-    mov rax, 1          ; sys_write
-    mov rdi, 1          ; stdout
-    mov rsi, success_msg
-    mov rdx, success_len
+    mov dword [addr_len], 16
+    
+receive_loop:
+    mov rax, 45
+    mov rdi, r12
+    mov rsi, buffer
+    mov rdx, 1024
+    mov r10, 0
+    mov r8, client_addr
+    mov r9, addr_len
     syscall
     
-    mov rax, 60         ; sys_exit
-    xor rdi, rdi        ; Exit code 0
+    test rax, rax
+    js receive_loop
+    
+    mov r14, rax
+    
+    mov byte [buffer + r14], 10
+    inc r14
+    
+    mov rax, 1
+    mov rdi, r13
+    mov rsi, buffer
+    mov rdx, r14
+    syscall
+    
+    jmp receive_loop
+    
+socket_error:
+    mov rax, 1
+    mov rdi, 2
+    mov rsi, error_socket
+    mov rdx, error_socket_len
+    syscall
+    
+    mov rax, 60
+    mov rdi, 1
+    syscall
+    
+bind_error:
+    mov rax, 1
+    mov rdi, 2
+    mov rsi, error_bind
+    mov rdx, error_bind_len
+    syscall
+    
+    mov rax, 3
+    mov rdi, r12
+    syscall
+    
+    mov rax, 60
+    mov rdi, 1
+    syscall
+    
+file_error:
+    mov rax, 1
+    mov rdi, 2
+    mov rsi, error_file
+    mov rdx, error_file_len
+    syscall
+    
+    mov rax, 3
+    mov rdi, r12
+    syscall
+    
+    mov rax, 60
+    mov rdi, 1
     syscall
