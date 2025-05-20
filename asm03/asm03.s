@@ -6,31 +6,31 @@ section .text
     global _start
 
 _start:
-    pop rcx                 ; argc (nombre d'arguments)
-    cmp rcx, 2              ; vérifier qu'il y a au moins un argument
+    pop rcx
+    cmp rcx, 2
     jne exit_with_error
     
-    pop rdi                 ; argv[0] (nom du programme)
-    pop rdi                 ; argv[1] (premier argument)
+    pop rdi
+    pop rdi
     
-    cmp byte [rdi], '4'     ; premier caractère
+    cmp byte [rdi], '4'
     jne exit_with_error
-    cmp byte [rdi+1], '2'   ; deuxième caractère
+    cmp byte [rdi+1], '2'
     jne exit_with_error
-    cmp byte [rdi+2], 0     ; Vérifier que c'est bien la fin de la chaîne
+    cmp byte [rdi+2], 0
     jne exit_with_error
     
-    mov rax, 1              ; sys_write
-    mov rdi, 1              ; stdout
-    mov rsi, output         ; message à afficher
-    mov rdx, output_len     ; longueur du message
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, output
+    mov rdx, output_len
     syscall
     
-    mov rax, 60             ; sys_exit
-    mov rdi, 0              ; code de retour 0
+    mov rax, 60
+    mov rdi, 0
     syscall
     
 exit_with_error:
-    mov rax, 60             ; sys_exit
-    mov rdi, 1              ; code de retour 1
+    mov rax, 60
+    mov rdi, 1
     syscall
