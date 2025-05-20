@@ -45,14 +45,6 @@ _start:
     
     mov r12, rax
     
-    mov rax, 54         ; setsockopt
-    mov rdi, r12        ; socket
-    mov rsi, 1          ; SOL_SOCKET
-    mov rdx, 2          ; SO_REUSEADDR
-    mov r10, opt_val    ; option value (1)
-    mov r8, 4           ; option length
-    syscall
-    
     mov word [server_addr], 2
     mov word [server_addr+2], 0x9a10
     mov dword [server_addr+4], 0
@@ -68,7 +60,7 @@ _start:
     
     mov rax, 50
     mov rdi, r12
-    mov rsi, 10         ; Increased backlog
+    mov rsi, 5
     syscall
     
     test rax, rax
@@ -132,9 +124,7 @@ client_loop:
     test rax, rax
     jle client_done
     
-    mov r15, rax        ; Save input length
-    mov rax, 0
-    mov byte [cmd_buffer + r15 - 1], 0
+    mov dword [cmd_buffer + rax - 1], 0
     
     mov rdi, cmd_buffer
     call compare_cmd_ping
@@ -322,6 +312,3 @@ reverse_string_done:
     mov rcx, r9
     inc rcx
     ret
-
-section .data
-    opt_val dd 1
