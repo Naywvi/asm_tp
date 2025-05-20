@@ -7,7 +7,7 @@ section .text
 
 _start:
     pop rcx
-    cmp rcx, 3
+    cmp rcx, 2
     jl exit_error
     
     pop rdi
@@ -16,18 +16,18 @@ _start:
     mov r8, 16
     
     cmp byte [rdi], '-'
-    jne parse_number
+    jne convert_direct
     
     cmp byte [rdi+1], 'b'
     jne exit_error
     
     mov r8, 2
-    cmp rcx, 4
+    cmp rcx, 3
     jl exit_error
     
     pop rdi
     
-parse_number:
+convert_direct:
     call atoi
     mov rbx, rax
     
