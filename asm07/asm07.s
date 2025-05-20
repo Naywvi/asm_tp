@@ -14,6 +14,9 @@ _start:
     mov rdi, buffer
     call atoi
     
+    cmp rax, -1
+    je bad_input
+    
     cmp rax, 1
     jle not_prime
     
@@ -47,6 +50,11 @@ not_prime:
     mov rdi, 1
     syscall
     
+bad_input:
+    mov rax, 60
+    mov rdi, 2
+    syscall
+    
 atoi:
     xor rax, rax
     xor rcx, rcx
@@ -58,12 +66,21 @@ atoi_loop:
     cmp dl, 0
     je atoi_end
     
+    cmp dl, '0'
+    jl invalid_char
+    cmp dl, '9'
+    jg invalid_char
+    
     sub dl, '0'
     imul rax, 10
     add rax, rdx
     
     inc rcx
     jmp atoi_loop
+    
+invalid_char:
+    mov rax, -1
+    ret
     
 atoi_end:
     ret
