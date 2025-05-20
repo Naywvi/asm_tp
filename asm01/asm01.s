@@ -1,5 +1,5 @@
 section .data
-    msg db "1337", 10
+    msg db "1", "3", "3", "7", 10
     len equ $ - msg
 
 section .text
