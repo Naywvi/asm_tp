@@ -14,6 +14,9 @@ _start:
     mov rdi, buf
     call atoi
     
+    cmp rax, -1
+    je bad_input
+    
     test rax, 1
     jz exit_success
     
@@ -24,6 +27,11 @@ _start:
 exit_success:
     mov rax, 60
     mov rdi, 0
+    syscall
+    
+bad_input:
+    mov rax, 60
+    mov rdi, 2
     syscall
     
 atoi:
@@ -37,12 +45,21 @@ atoi_loop:
     cmp dl, 0
     je atoi_end
     
+    cmp dl, '0'
+    jl invalid_char
+    cmp dl, '9'
+    jg invalid_char
+    
     sub dl, '0'
     imul rax, 10
     add rax, rdx
     
     inc rcx
     jmp atoi_loop
+    
+invalid_char:
+    mov rax, -1
+    ret
     
 atoi_end:
     ret
