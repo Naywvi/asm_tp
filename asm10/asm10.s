@@ -52,6 +52,13 @@ exit_error:
 atoi:
     xor rax, rax
     xor rcx, rcx
+    mov r9, 0
+    
+    cmp byte [rdi], '-'
+    jne atoi_loop
+    
+    mov r9, 1
+    inc rdi
     
 atoi_loop:
     movzx rdx, byte [rdi + rcx]
@@ -66,16 +73,30 @@ atoi_loop:
     jmp atoi_loop
     
 atoi_end:
+    cmp r9, 0
+    je atoi_done
+    neg rax
+    
+atoi_done:
     ret
 
 print_number:
     mov rax, rdi
+    mov r9, 0
+    
+    test rax, rax
+    jns positive_num
+    
+    mov r9, 1
+    neg rax
+    
+positive_num:
     mov rbx, 10
     mov rdi, buffer
     add rdi, 19
     mov byte [rdi], 10
     dec rdi
-    mov rcx, 1
+    xor rcx, rcx
     
 print_loop:
     xor rdx, rdx
@@ -87,10 +108,19 @@ print_loop:
     test rax, rax
     jnz print_loop
     
+    cmp r9, 1
+    jne print_result
+    
+    mov byte [rdi], '-'
+    dec rdi
+    inc rcx
+    
+print_result:
     inc rdi
     mov rax, 1
     mov rsi, rdi
     mov rdi, 1
     mov rdx, rcx
+    inc rdx
     syscall
     ret
