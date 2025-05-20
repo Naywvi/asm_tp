@@ -1,5 +1,6 @@
 section .data
     buffer times 20 db 0
+    minus db '-'
 
 section .text
     global _start
@@ -34,6 +35,12 @@ exit_error:
 atoi:
     xor rax, rax
     xor rcx, rcx
+    xor r8, r8
+    
+    cmp byte [rdi], '-'
+    jne atoi_loop
+    mov r8, 1
+    inc rdi
     
 atoi_loop:
     movzx rdx, byte [rdi + rcx]
@@ -48,6 +55,10 @@ atoi_loop:
     jmp atoi_loop
     
 atoi_end:
+    cmp r8, 1
+    jne atoi_positive
+    neg rax
+atoi_positive:
     ret
 
 itoa:
@@ -58,6 +69,18 @@ itoa:
     mov byte [rdi], 0
     mov rcx, 1
     
+    test rax, rax
+    jns itoa_positive
+    neg rax
+    push rax
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, minus
+    mov rdx, 1
+    syscall
+    pop rax
+    
+itoa_positive:
 itoa_loop:
     xor rdx, rdx
     div rbx
