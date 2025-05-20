@@ -45,19 +45,14 @@ _start:
     
     mov rax, 2
     mov rdi, filename
-    mov rsi, 1102o      ; O_WRONLY | O_CREAT | O_APPEND | O_TRUNC
-    mov rdx, 0777o      ; rwxrwxrwx
+    mov rsi, 1090
+    mov rdx, 0666
     syscall
     
     test rax, rax
     js file_error
     
     mov r13, rax
-    
-    mov rax, 90         ; chmod
-    mov rdi, filename
-    mov rsi, 0777o      ; rwxrwxrwx
-    syscall
     
     mov rax, 1
     mov rdi, 1
@@ -89,10 +84,6 @@ receive_loop:
     mov rdi, r13
     mov rsi, buffer
     mov rdx, r14
-    syscall
-    
-    mov rax, 74         ; sync to disk
-    mov rdi, r13
     syscall
     
     jmp receive_loop
