@@ -1,6 +1,6 @@
 section .data
     buffer times 20 db 0
-    minus db '-'
+    newline db 10
 
 section .text
     global _start
@@ -12,16 +12,22 @@ _start:
     
     pop rdi
     pop rdi
+    
+    cmp byte [rdi], '-'
+    je exit_negative
+    
     call atoi
     mov rbx, rax
     
     pop rdi
-    call atoi
+    cmp byte [rdi], '-'
+    je exit_negative
     
+    call atoi
     add rax, rbx
     
     mov rdi, rax
-    call itoa
+    call print_number
     
     mov rax, 60
     xor rdi, rdi
@@ -31,16 +37,15 @@ exit_error:
     mov rax, 60
     mov rdi, 1
     syscall
+    
+exit_negative:
+    mov rax, 60
+    mov rdi, 139
+    syscall
 
 atoi:
     xor rax, rax
     xor rcx, rcx
-    xor r8, r8
-    
-    cmp byte [rdi], '-'
-    jne atoi_loop
-    mov r8, 1
-    inc rdi
     
 atoi_loop:
     movzx rdx, byte [rdi + rcx]
@@ -55,45 +60,40 @@ atoi_loop:
     jmp atoi_loop
     
 atoi_end:
-    cmp r8, 1
-    jne atoi_positive
-    neg rax
-atoi_positive:
     ret
 
-itoa:
+print_number:
     mov rax, rdi
-    mov rbx, 10
     mov rdi, buffer
-    add rdi, 19
-    mov byte [rdi], 0
-    mov rcx, 1
+    xor rcx, rcx
+    mov r8, 10
     
-    test rax, rax
-    jns itoa_positive
-    neg rax
-    push rax
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, minus
-    mov rdx, 1
-    syscall
-    pop rax
-    
-itoa_positive:
-itoa_loop:
+print_loop:
     xor rdx, rdx
-    div rbx
+    div r8
     add dl, '0'
-    dec rdi
-    mov [rdi], dl
+    push rdx
     inc rcx
     test rax, rax
-    jnz itoa_loop
+    jnz print_loop
+    
+    mov rdi, buffer
+    xor rdx, rdx
+    
+reverse_loop:
+    cmp rdx, rcx
+    je print_newline
+    pop rax
+    mov [rdi + rdx], al
+    inc rdx
+    jmp reverse_loop
+    
+print_newline:
+    mov byte [rdi + rdx], 10
+    inc rdx
     
     mov rax, 1
-    mov rsi, rdi
+    mov rsi, buffer
     mov rdi, 1
-    mov rdx, rcx
     syscall
     ret
