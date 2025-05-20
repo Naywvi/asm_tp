@@ -3,16 +3,12 @@ section .text
 
 _start:
     pop rax
-    cmp rax, 1
-    jle exit
+    cmp rax, 2
+    jl exit
     
     pop rax
     pop rdi
     call print_string
-    
-    mov rax, 60
-    xor rdi, rdi
-    syscall
     
 exit:
     mov rax, 60
