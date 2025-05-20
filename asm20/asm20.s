@@ -1,5 +1,5 @@
 section .data
-    listen_msg db 27, "⏳ Listening on port 4242", 27, "[0m", 10
+    listen_msg db "Listening on port 4242", 10
     listen_len equ $ - listen_msg
     
     prompt db "Type a command: "
