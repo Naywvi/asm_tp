@@ -22,6 +22,15 @@ section .data
     reverse_cmd db "REVERSE "
     reverse_len equ $ - reverse_cmd
 
+    debug_open db "Debug: Socket opened", 10
+    debug_open_len equ $ - debug_open
+    
+    debug_bind db "Debug: Socket bound", 10
+    debug_bind_len equ $ - debug_bind
+    
+    debug_listen db "Debug: Listening started", 10
+    debug_listen_len equ $ - debug_listen
+
 section .bss
     buffer resb 1024
     work_buffer resb 1024
@@ -37,11 +46,10 @@ section .text
 global _start
 
 _start:
-    ; Create socket
-    mov eax, 41         ; socket
-    mov edi, 2          ; AF_INET
-    mov esi, 1          ; SOCK_STREAM
-    xor edx, edx        ; IPPROTO_IP
+    mov eax, 41
+    mov edi, 2
+    mov esi, 1
+    xor edx, edx
     syscall
     
     test eax, eax
@@ -49,44 +57,65 @@ _start:
     
     mov dword [server_fd], eax
     
-    ; Prepare sockaddr_in structure
-    mov word [sockaddr_in], 2        ; AF_INET
-    mov word [sockaddr_in+2], 0x9a10 ; Port 4242 (network byte order)
-    mov dword [sockaddr_in+4], 0     ; INADDR_ANY
-    mov dword [sockaddr_in+8], 0     ; Padding
-    mov dword [sockaddr_in+12], 0    ; Padding
+    mov eax, 1
+    mov edi, 1
+    mov esi, debug_open
+    mov edx, debug_open_len
+    syscall
     
-    ; Bind socket
-    mov eax, 49         ; bind
+    mov eax, 54
+    mov edi, dword [server_fd]
+    mov esi, 1
+    mov edx, 2
+    lea r10, [option_val]
+    mov r8d, 4
+    syscall
+    
+    mov word [sockaddr_in], 2
+    mov word [sockaddr_in+2], 0x9a10
+    mov dword [sockaddr_in+4], 0
+    mov dword [sockaddr_in+8], 0
+    mov dword [sockaddr_in+12], 0
+    
+    mov eax, 49
     mov edi, dword [server_fd]
     mov esi, sockaddr_in
-    mov edx, 16         ; sizeof(sockaddr_in)
+    mov edx, 16
     syscall
     
     test eax, eax
     js exit_error
     
-    ; Listen for connections
-    mov eax, 50         ; listen
+    mov eax, 1
+    mov edi, 1
+    mov esi, debug_bind
+    mov edx, debug_bind_len
+    syscall
+    
+    mov eax, 50
     mov edi, dword [server_fd]
-    mov esi, 5          ; backlog
+    mov esi, 5
     syscall
     
     test eax, eax
     js exit_error
     
-    ; Print listening message
-    mov eax, 1          ; write
-    mov edi, 1          ; STDOUT
+    mov eax, 1
+    mov edi, 1
+    mov esi, debug_listen
+    mov edx, debug_listen_len
+    syscall
+    
+    mov eax, 1
+    mov edi, 1
     mov esi, listen_msg
     mov edx, listen_len
     syscall
     
-    ; Accept connections loop
     mov dword [addr_len], 16
     
 accept_loop:
-    mov eax, 43         ; accept
+    mov eax, 43
     mov edi, dword [server_fd]
     mov esi, client_addr
     mov edx, addr_len
@@ -97,44 +126,39 @@ accept_loop:
     
     mov dword [client_fd], eax
     
-    ; Fork to handle client
-    mov eax, 57         ; fork
+    mov eax, 57
     syscall
     
     test eax, eax
     js close_client
-    jz handle_client    ; Child process
+    jz handle_client
     
-    ; Parent process
-    mov eax, 3          ; close
+    mov eax, 3
     mov edi, dword [client_fd]
     syscall
     
     jmp accept_loop
     
 close_client:
-    mov eax, 3          ; close
+    mov eax, 3
     mov edi, dword [client_fd]
     syscall
     
     jmp accept_loop
     
 handle_client:
-    ; Child process handles client
-    mov eax, 3          ; close
+    mov eax, 3
     mov edi, dword [server_fd]
     syscall
     
 client_loop:
-    ; Send prompt
-    mov eax, 1          ; write
+    mov eax, 1
     mov edi, dword [client_fd]
     mov esi, prompt
     mov edx, prompt_len
     syscall
     
-    ; Receive command
-    mov eax, 0          ; read
+    mov eax, 0
     mov edi, dword [client_fd]
     mov esi, buffer
     mov edx, 1024
@@ -144,9 +168,8 @@ client_loop:
     jle client_done
     
     mov ecx, eax
-    mov byte [buffer + eax - 1], 0   ; Strip newline
+    mov byte [buffer + eax - 1], 0
     
-    ; Check for PING command
     mov esi, buffer
     mov edi, ping_cmd
     mov edx, ping_len
@@ -154,7 +177,6 @@ client_loop:
     test eax, eax
     jnz handle_ping
     
-    ; Check for EXIT command
     mov esi, buffer
     mov edi, exit_cmd
     mov edx, exit_len
@@ -162,7 +184,6 @@ client_loop:
     test eax, eax
     jnz handle_exit
     
-    ; Check for REVERSE command
     mov esi, buffer
     mov edi, reverse_cmd
     mov edx, reverse_len
@@ -173,7 +194,7 @@ client_loop:
     jmp client_loop
     
 handle_ping:
-    mov eax, 1          ; write
+    mov eax, 1
     mov edi, dword [client_fd]
     mov esi, pong_msg
     mov edx, pong_len
@@ -182,23 +203,22 @@ handle_ping:
     jmp client_loop
     
 handle_exit:
-    mov eax, 1          ; write
+    mov eax, 1
     mov edi, dword [client_fd]
     mov esi, goodbye_msg
     mov edx, goodbye_len
     syscall
     
 client_done:
-    mov eax, 3          ; close
+    mov eax, 3
     mov edi, dword [client_fd]
     syscall
     
-    mov eax, 60         ; exit
-    xor edi, edi        ; Exit code 0
+    mov eax, 60
+    xor edi, edi
     syscall
     
 handle_reverse:
-    ; Copy text after "REVERSE " to work buffer
     mov esi, buffer
     add esi, reverse_len
     mov edi, work_buffer
@@ -214,23 +234,19 @@ copy_loop:
     jmp copy_loop
     
 copy_done:
-    ; Get length of string to reverse
     mov esi, work_buffer
     call strlen
     
-    ; Reverse the string
     mov ecx, eax
     mov esi, work_buffer
     mov edi, buffer
     call reverse
     
-    ; Add newline
     mov byte [buffer + eax], 10
     inc eax
     
-    ; Send reversed string
     mov edx, eax
-    mov eax, 1          ; write
+    mov eax, 1
     mov edi, dword [client_fd]
     mov esi, buffer
     syscall
@@ -238,14 +254,10 @@ copy_done:
     jmp client_loop
     
 exit_error:
-    mov eax, 60         ; exit
-    mov edi, 1          ; Exit code 1
+    mov eax, 60
+    mov edi, 1
     syscall
     
-; String functions
-; Compare two strings up to length
-; esi = str1, edi = str2, edx = length
-; Returns eax=1 if equal, eax=0 if not
 str_compare:
     xor ecx, ecx
     
@@ -268,16 +280,10 @@ str_cmp_not_equal:
     xor eax, eax
     ret
     
-; Check if string starts with prefix
-; esi = string, edi = prefix, edx = prefix length
-; Returns eax=1 if starts with, eax=0 if not
 str_startswith:
     call str_compare
     ret
     
-; Get length of null-terminated string
-; esi = string
-; Returns eax = length
 strlen:
     xor eax, eax
     
@@ -291,9 +297,6 @@ strlen_loop:
 strlen_done:
     ret
     
-; Reverse a string
-; esi = source string, edi = destination buffer, ecx = length
-; Returns eax = length of reversed string
 reverse:
     mov eax, ecx
     dec ecx
@@ -317,3 +320,6 @@ reverse_done:
     mov byte [edi + edx], 0
     mov eax, edx
     ret
+
+section .data
+    option_val dd 1
