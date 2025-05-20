@@ -1,6 +1,4 @@
 section .data
-    pattern db "1337", 0
-    replacement db "H4CK", 0
     buffer times 4096 db 0
 
 section .text
@@ -15,71 +13,71 @@ _start:
     pop rdi
     
     mov rax, 2
-    mov rsi, 2          
-    xor rdx, rdx
+    mov rsi, 2
+    mov rdx, 0644o
     syscall
     
     cmp rax, 0
     jl exit_error
     
-    mov r8, rax         
+    mov r8, rax
     
     mov rdi, rax
-    mov rax, 0
+    xor rax, rax
     mov rsi, buffer
     mov rdx, 4096
     syscall
     
-    mov r9, rax         
+    mov r9, rax
     
-    mov r10, 0          
+    xor r10, r10
     
-search_loop:
+find_loop:
     cmp r10, r9
     jge exit_error
     
-    mov r11d, dword [buffer + r10]
+    lea rdi, [buffer + r10]
     
-    cmp r11b, '1'
-    jne next_byte
+    cmp byte [rdi], '1'
+    jne next_pos
     
-    cmp byte [buffer + r10 + 1], '3'
-    jne next_byte
+    cmp byte [rdi+1], '3'
+    jne next_pos
     
-    cmp byte [buffer + r10 + 2], '3'
-    jne next_byte
+    cmp byte [rdi+2], '3'
+    jne next_pos
     
-    cmp byte [buffer + r10 + 3], '7'
-    jne next_byte
+    cmp byte [rdi+3], '7'
+    jne next_pos
     
-    mov byte [buffer + r10], 'H'
-    mov byte [buffer + r10 + 1], '4'
-    mov byte [buffer + r10 + 2], 'C'
-    mov byte [buffer + r10 + 3], 'K'
+    mov byte [rdi], 'H'
+    mov byte [rdi+1], '4'
+    mov byte [rdi+2], 'C'
+    mov byte [rdi+3], 'K'
     
+    mov rax, 8
     mov rdi, r8
-    mov rax, 8          
-    xor rsi, rsi        
-    xor rdx, rdx        
+    xor rsi, rsi
+    xor rdx, rdx
     syscall
     
-    mov rdi, r8
     mov rax, 1
+    mov rdi, r8
     mov rsi, buffer
     mov rdx, r9
     syscall
     
-    mov rdi, r8
     mov rax, 3
+    mov rdi, r8
     syscall
     
     mov rax, 60
     xor rdi, rdi
     syscall
     
-next_byte:
+next_pos:
     inc r10
-    jmp search_loop
+    jmp find_loop
     
 exit_error:
     mov rax, 60
