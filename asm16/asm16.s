@@ -1,5 +1,5 @@
 section .data
-    buffer times 4096 db 0
+    buffer times 8192 db 0
 
 section .text
     global _start
@@ -13,69 +13,78 @@ _start:
     pop rdi
     
     mov rax, 2
-    mov rsi, 2
-    mov rdx, 0644o
+    mov rsi, 2          ; O_RDWR
+    mov rdx, 0644o      ; Mode
     syscall
     
     cmp rax, 0
     jl exit_error
     
-    mov r8, rax
+    mov r8, rax         ; Save file descriptor
     
+    ; Read file
     mov rdi, rax
     xor rax, rax
     mov rsi, buffer
-    mov rdx, 4096
+    mov rdx, 8192
     syscall
     
-    mov r9, rax
+    mov r9, rax         ; Save file size
     
-    xor r10, r10
+    ; Search for "1337" in the executable
+    xor r10, r10        ; Offset counter
     
 find_loop:
     cmp r10, r9
     jge exit_error
     
-    lea rdi, [buffer + r10]
+    mov al, [buffer + r10]
+    cmp al, '1'
+    jne next_byte
     
-    cmp byte [rdi], '1'
-    jne next_pos
+    mov al, [buffer + r10 + 1]
+    cmp al, '3'
+    jne next_byte
     
-    cmp byte [rdi+1], '3'
-    jne next_pos
+    mov al, [buffer + r10 + 2]
+    cmp al, '3'
+    jne next_byte
     
-    cmp byte [rdi+2], '3'
-    jne next_pos
+    mov al, [buffer + r10 + 3]
+    cmp al, '7'
+    jne next_byte
     
-    cmp byte [rdi+3], '7'
-    jne next_pos
+    ; Found it - replace with "H4CK"
+    mov byte [buffer + r10], 'H'
+    mov byte [buffer + r10 + 1], '4'
+    mov byte [buffer + r10 + 2], 'C'
+    mov byte [buffer + r10 + 3], 'K'
     
-    mov byte [rdi], 'H'
-    mov byte [rdi+1], '4'
-    mov byte [rdi+2], 'C'
-    mov byte [rdi+3], 'K'
-    
+    ; Seek to the beginning of the file
     mov rax, 8
     mov rdi, r8
     xor rsi, rsi
     xor rdx, rdx
     syscall
     
+    ; Write the modified content
     mov rax, 1
     mov rdi, r8
     mov rsi, buffer
     mov rdx, r9
     syscall
     
+    ; Close the file
     mov rax, 3
     mov rdi, r8
     syscall
     
+    ; Exit successfully
     mov rax, 60
     xor rdi, rdi
     syscall
     
-next_pos:
+next_byte:
     inc r10
     jmp find_loop
     
