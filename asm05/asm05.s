@@ -4,15 +4,19 @@ section .text
 _start:
     pop rax
     cmp rax, 2
-    jl exit
+    jl no_param
     
     pop rax
     pop rdi
     call print_string
     
-exit:
     mov rax, 60
     xor rdi, rdi
+    syscall
+    
+no_param:
+    mov rax, 60
+    mov rdi, 1
     syscall
 
 print_string:
